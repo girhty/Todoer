@@ -85,6 +85,9 @@ if command in commands:
             print_todo(item,index)
     if command=="toggle":
         index=int(args[1])
+        if index>len(TD.todos)-1:
+            print("index not found")
+            exit(1)
         TD.toggle(index)
         print_todo(TD.todos[index],index)
     exit(0)
