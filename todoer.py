@@ -4,7 +4,7 @@ import os
 import time
 from datetime import datetime
 
-commands=["add","remove","todos","toggle"]
+commands=["add","remove","list","toggle","purge"]
 
 def parse(data):
     if len(data)==0:
@@ -79,10 +79,13 @@ if command in commands:
         TD.add(parse_item(" ".join(i for i in args[1:])))
     if command=="remove":
         TD.remove(int(args[1]))
-    if command=="todos":
+    if command=="list":
         tds=TD.list()
         for index,item in enumerate(tds):
             print_todo(item,index)
+    if command=="purge":
+        with open("td.db","w") as f:
+            f.truncate(0)
     if command=="toggle":
         index=int(args[1])
         if index>len(TD.todos)-1:
