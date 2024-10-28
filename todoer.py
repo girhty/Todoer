@@ -5,57 +5,56 @@ import time
 from datetime import datetime
 
 commands=["add","remove","list","toggle","purge"]
-
-def parse(data):
-    if len(data)==0:
-        return []
-    tds=[]
-    for i in data: 
-        i=i.replace("\n","")
-        if len(i)==0:
-            continue
-        vals=i.split(",")
-        td={"todo":vals[0],"status":int(vals[1]),"timestamp":int(vals[2])}
-        tds.append(td)
-    return tds
-
-def write_todos(items):
-    with open("td.db","w") as file:
-        for item in items:
-            file.writelines(f"{item['todo']},{item['status']},{item['timestamp']}\n")
-    
 def parse_item(item):
     return {"todo":item,"status":0,"timestamp":time.time_ns()}
 
-def print_todo(todo,index):
-    td=todo["todo"]
-    space=len(td)+45
-    if bool(todo["status"]):
-        stat="✅"
-    else:
-        stat="❌"
-    ts=datetime.fromtimestamp(todo["timestamp"]/1e9)
-    print("╔"+"═"*space+"╗")
-    print("║",index,"-",td," ┃ ",stat," ┃",ts,"  ║")
-    print("╚"+"═"*space+"╝")
-
 class toDo():
-    def __init__(self,items):
-        self.todos=parse(items)
+    def __init__(self,data):
+        self.THEME='36m'
+        self.longest_todo=0
+        if len(data)==0:
+            self.todos=[]
+        tds=[]
+        for i in data: 
+            i=i.replace("\n","")
+            if len(i)==0:
+                continue
+            vals=i.split(",")
+            tdlen=len(vals[0])+len(vals[1])+len(vals[2])
+            td={"todo":vals[0],"status":int(vals[1]),"timestamp":int(vals[2]),"tdlen":tdlen}
+            if tdlen>self.longest_todo:
+                self.longest_todo=tdlen
+            tds.append(td)
+        self.todos=tds
+    def write_to_db(self):
+        with open("td.db","w") as file:
+            for item in self.todos:
+                file.writelines(f"{item['todo']},{item['status']},{item['timestamp']}\n")
     def add(self,item):
         self.todos.append(item)
-        write_todos(self.todos)
+        self.write_to_db()
     def remove(self,index):
         del self.todos[index]
-        write_todos(self.todos)
+        self.write_to_db()
     def list(self):
-        return self.todos
+        print(f"\033[{self.THEME}╔\033[0m"+f"\033[{self.THEME}═\033[0m"*(self.longest_todo+1)+f"\033[{self.THEME}╗\033[0m")
+        for index,t in enumerate(self.todos):
+            todo=t["todo"]
+            if bool(t["status"]):
+                stat="✅"
+            else:
+                stat="❌"
+            ts=datetime.fromtimestamp(t["timestamp"]/1e9)
+            offset=self.longest_todo-t["tdlen"]
+            print(f"\033[{self.THEME}║\033[0m",f"\033[{self.THEME}{ts.date()}\033[0m",index,".",f"\033[1m{todo}\033[0m",stat," "*(offset),f"\033[{self.THEME}║\033[0m")
+            print(f"\033[{self.THEME}║\033[0m",f"\033[{self.THEME}═\033[0m"*(self.longest_todo-1),f"\033[{self.THEME}║\033[0m")
+        print(f"\033[{self.THEME}╚\033[0m"+f"\033[{self.THEME}═\033[0m"*(self.longest_todo+1)+f"\033[{self.THEME}╝\033[0m")
     def toggle(self,index):
         if self.todos[index]["status"]==1:
             self.todos[index]["status"]=0
         else:
             self.todos[index]["status"]=1
-        write_todos(self.todos)    
+        self.write_to_db()
 
 path=os.getcwd()
 if not os.path.isfile(f"{path}/td.db"):
@@ -80,9 +79,7 @@ if command in commands:
     if command=="remove":
         TD.remove(int(args[1]))
     if command=="list":
-        tds=TD.list()
-        for index,item in enumerate(tds):
-            print_todo(item,index)
+        TD.list()
     if command=="purge":
         with open("td.db","w") as f:
             f.truncate(0)
@@ -92,7 +89,7 @@ if command in commands:
             print("index not found")
             exit(1)
         TD.toggle(index)
-        print_todo(TD.todos[index],index)
+        TD.list()
     exit(0)
 
 print("command not found")
